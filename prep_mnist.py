@@ -59,7 +59,12 @@ class DataSet(object):
     batch_y = self.dat_train_gt[self._index:(self._index+batch_size)]
     return [batch_x, batch_y]
 
+  def get_random_batch(self, batch_size):
+    rand_ind = np.random.randint(0,self.dat_train.shape[0]-batch_size)
 
+    batch_x = self.dat_train[rand_ind:(rand_ind+batch_size)]
+    batch_y = self.dat_train_gt[rand_ind:(rand_ind+batch_size)]
+    return [batch_x, batch_y]
 
 
 
@@ -75,7 +80,7 @@ def get_mnist_data(data_folder,gridy, gridx, test, emode):
         images = mnist.train.images
         labels = mnist.train.labels
 
-    nr_img_train = mnist.train.images.shape[0] / nrs_per_img
+    nr_img_train = (images.shape[0] / nrs_per_img)
 
     dat_train = np.zeros((nr_img_train, gridy * 28, gridx * 28, 1))
     dat_train_gt = np.zeros((nr_img_train, gridy * 28, gridx * 28, 1))

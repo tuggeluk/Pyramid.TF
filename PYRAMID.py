@@ -23,7 +23,7 @@ tf.flags.DEFINE_string('mode', "train", "Mode train/ test/ visualize")
 
 
 MAX_ITERATION = int(1e5 + 1)
-NUM_OF_CLASSES = 151
+NUM_OF_CLASSES = 11
 IMAGE_SIZE = 28
 
 
@@ -151,7 +151,7 @@ def main(argv=None):
         print("Setting up image reader MNIST")
         if FLAGS.mode == 'train':
             train_dataset_reader = prp.DataSet(FLAGS.data_dir, 1, 1, test=False, emode=False)
-        validation_dataset_reader = prp.DataSet(FLAGS.data_dir, 1, 1, test=False,emode=True)
+        validation_dataset_reader = prp.DataSet(FLAGS.data_dir, 1, 1, test=True, emode=False)
 
 
     sess = tf.Session()
