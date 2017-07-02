@@ -2,17 +2,20 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 
+
 import PyramidCell2D
 import TensorflowUtils as utils
 import read_MITSceneParsingData as scene_parsing
 import datetime
 import BatchDatsetReader as dataset
+import prep_mnist as prp
 from six.moves import xrange
+
 
 FLAGS = tf.flags.FLAGS
 tf.flags.DEFINE_integer("batch_size", "2", "batch size for training")
 tf.flags.DEFINE_string("logs_dir", "logs_pyramid/", "path to logs directory")
-tf.flags.DEFINE_string("dataset", "MIT", "MIT or MNIST")
+tf.flags.DEFINE_string("dataset", "MNIST", "MIT or MNIST")
 tf.flags.DEFINE_string("data_dir", "Data_zoo/MIT_SceneParsing/", "path to dataset")
 tf.flags.DEFINE_float("learning_rate", "1e-4", "Learning rate for Adam Optimizer")
 tf.flags.DEFINE_bool('debug', "False", "Debug mode: True/ False")
@@ -21,7 +24,7 @@ tf.flags.DEFINE_string('mode', "train", "Mode train/ test/ visualize")
 
 MAX_ITERATION = int(1e5 + 1)
 NUM_OF_CLASSES = 151
-IMAGE_SIZE = 224
+IMAGE_SIZE = 28
 
 
 def process_dimension(input, cell, dim, scope):
@@ -95,8 +98,7 @@ def inference(image, keep_prob):
     logits = tf.nn.softmax(dense2, -1)
 
     classification = tf.argmax(logits, 3)
-    classification = tf.reshape(classification, [FLAGS.batch_size, 224, 224, 1])
-
+    classification = tf.reshape(classification, [FLAGS.batch_size, IMAGE_SIZE, IMAGE_SIZE, 1])
 
     return classification, logits
 
@@ -113,7 +115,7 @@ def train(loss_val, var_list):
 
 def main(argv=None):
     keep_probability = tf.placeholder(tf.float32, name="keep_probabilty")
-    image = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 3], name="input_image")
+    image = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 1], name="input_image")
     annotation = tf.placeholder(tf.int32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 1], name="annotation")
 
     pred_annotation, logits = inference(image, keep_probability)
@@ -134,16 +136,23 @@ def main(argv=None):
     print("Setting up summary op...")
     summary_op = tf.summary.merge_all()
 
-    print("Setting up image reader...")
-    train_records, valid_records = scene_parsing.read_dataset(FLAGS.data_dir)
-    print(len(train_records))
-    print(len(valid_records))
+    if FLAGS.dataset == 'MIT':
+        print("Setting up image reader MIT")
+        train_records, valid_records = scene_parsing.read_dataset(FLAGS.data_dir)
+        print(len(train_records))
+        print(len(valid_records))
+        print("Setting up dataset reader")
+        image_options = {'resize': True, 'resize_size': IMAGE_SIZE}
+        if FLAGS.mode == 'train':
+            train_dataset_reader = dataset.BatchDatset(train_records, image_options)
+        validation_dataset_reader = dataset.BatchDatset(valid_records, image_options)
 
-    print("Setting up dataset reader")
-    image_options = {'resize': True, 'resize_size': IMAGE_SIZE}
-    if FLAGS.mode == 'train':
-        train_dataset_reader = dataset.BatchDatset(train_records, image_options)
-    validation_dataset_reader = dataset.BatchDatset(valid_records, image_options)
+    else:
+        print("Setting up image reader MNIST")
+        if FLAGS.mode == 'train':
+            train_dataset_reader = prp.DataSet(FLAGS.data_dir, 1, 1, test=False, emode=False)
+        validation_dataset_reader = prp.DataSet(FLAGS.data_dir, 1, 1, test=False,emode=True)
+
 
     sess = tf.Session()
 

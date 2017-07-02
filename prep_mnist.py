@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.examples.tutorials.mnist import input_data
+import pdb
 
 
 dat_train = dat_train_gt = dat_test = dat_test_gt = None
@@ -44,134 +45,57 @@ class DataSet(object):
                data_folder,
                gridx,
                gridy,
-               ezmode=False):
-    self.dat_train, self.dat_train_gt, self.dat_test, self.dat_test_gt = init_data(data_folder, gridy, gridx, ezmode=False)
+               test= False,
+               emode=False):
+    self.dat_train, self.dat_train_gt = get_mnist_data(data_folder, gridy, gridx,test, emode)
     self._index = 0
 
 
-  def next_batch(self, batch_size, test):
-    if test:
-        batch_x = self.dat_test[0:batch_size]
-        batch_y = self.dat_test_gt[0:batch_size]
-    else:
-        if self._index + batch_size > self.dat_train.shape[0]:
-            self._index = 0
+  def next_batch(self, batch_size):
+    if self._index + batch_size > self.dat_train.shape[0]:
+        self._index = 0
 
-        batch_x = self.dat_train[self._index:(self._index+batch_size)]
-        batch_y = self.dat_train_gt[self._index:(self._index+batch_size)]
+    batch_x = self.dat_train[self._index:(self._index+batch_size)]
+    batch_y = self.dat_train_gt[self._index:(self._index+batch_size)]
     return [batch_x, batch_y]
 
 
 
 
-def init_data(data_folder, gridy, gridx, ezmode = False):
-    if ezmode:
-        dat_train, dat_train_gt, dat_test, dat_test_gt = get_mnist_data_ez_mode(data_folder, gridy, gridx)
+
+def get_mnist_data(data_folder,gridy, gridx, test, emode):
+
+    mnist = input_data.read_data_sets(data_folder, one_hot=True)
+    nrs_per_img = gridx * gridy
+
+    if test:
+        images = mnist.test.images
+        labels = mnist.test.labels
     else:
-        dat_train, dat_train_gt, dat_test, dat_test_gt = get_mnist_data(data_folder,gridy, gridx)
+        images = mnist.train.images
+        labels = mnist.train.labels
 
-    return dat_train, dat_train_gt, dat_test, dat_test_gt
-
-
-def get_mnist_data(data_folder,gridy, gridx):
-    zeros_array = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.])
-    one_array = np.array([1.])
-
-    mnist = input_data.read_data_sets(data_folder, one_hot=True)
-
-    nrs_per_img = gridx * gridy
     nr_img_train = mnist.train.images.shape[0] / nrs_per_img
 
     dat_train = np.zeros((nr_img_train, gridy * 28, gridx * 28, 1))
-    dat_train_gt = np.zeros((nr_img_train, gridy * 28, gridx * 28, 11))
+    dat_train_gt = np.zeros((nr_img_train, gridy * 28, gridx * 28, 1))
 
     digit_count = 0
     for i in xrange(nr_img_train):
         for ii in xrange(gridy):
             for iii in xrange(gridx):
-                dat_train[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii)] = mnist.train.images[
-                    digit_count].reshape(28, 28, 1)
+                dat_train[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii)] = images[digit_count].reshape(28, 28, 1)
 
-                gt_patch = (np.outer(np.ceil(mnist.train.images[digit_count]),
-                                     np.concatenate((mnist.train.labels[digit_count], np.zeros(1)))) +
-                            np.outer((np.ceil(mnist.train.images[digit_count]) - 1) * -1, zeros_array))
-
-                dat_train_gt[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii), :] = gt_patch.reshape(28, 28,
-                                                                                                                11)
-
-                digit_count += 1
-
-    nr_img_test = mnist.test.images.shape[0] / nrs_per_img
-    dat_test = np.zeros((nr_img_test, gridy * 28, gridx * 28, 1))
-    dat_test_gt = np.zeros((nr_img_test, gridy * 28, gridx * 28, 11))
-
-    digit_count = 0
-    for i in xrange(nr_img_test):
-        for ii in xrange(gridy):
-            for iii in xrange(gridx):
-                dat_test[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii)] = mnist.test.images[
-                    digit_count].reshape(28, 28, 1)
-
-                gt_patch = (np.outer(np.ceil(mnist.test.images[digit_count]),
-                                     np.concatenate((mnist.test.labels[digit_count], np.zeros(1)))) +
-                            np.outer((np.ceil(mnist.test.images[digit_count]) - 1) * -1, zeros_array))
-
-                dat_test_gt[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii), :] = gt_patch.reshape(28, 28,
-                                                                                                               11)
+                if emode:
+                    dat_train_gt[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii), :] = \
+                        np.ones(28*28).reshape(28, 28, 1) * (np.argmax(labels[digit_count]) + 1)
+                else:
+                    dat_train_gt[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii), :] = \
+                        np.ceil(images[digit_count]).reshape(28,28,1)*(np.argmax(labels[digit_count])+1)
 
                 digit_count += 1
 
-
-    return dat_train, dat_train_gt, dat_test, dat_test_gt
-
-
-def get_mnist_data_ez_mode(data_folder,gridy, gridx):
-    zeros_array = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 1.])
-    one_array = np.array([1.])
-
-    mnist = input_data.read_data_sets(data_folder, one_hot=True)
-
-    nrs_per_img = gridx * gridy
-    nr_img_train = mnist.train.images.shape[0] / nrs_per_img
-
-    dat_train = np.zeros((nr_img_train, gridy * 28, gridx * 28, 1))
-    dat_train_gt = np.zeros((nr_img_train, gridy * 28, gridx * 28, 10))
-
-    digit_count = 0
-    for i in xrange(nr_img_train):
-        for ii in xrange(gridy):
-            for iii in xrange(gridx):
-                dat_train[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii)] = mnist.train.images[
-                    digit_count].reshape(28, 28, 1)
-
-                gt_patch = (np.outer(np.ceil(mnist.train.images[digit_count]),
-                                     (mnist.train.labels[digit_count])) +
-                            np.outer((np.ceil(mnist.train.images[digit_count]) - 1) * -1, (mnist.train.labels[digit_count])))
-
-                dat_train_gt[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii), :] = gt_patch.reshape(28, 28,
-                                                                                                                10)
-
-                digit_count += 1
-
-    nr_img_test = mnist.test.images.shape[0] / nrs_per_img
-    dat_test = np.zeros((nr_img_test, gridy * 28, gridx * 28,1))
-    dat_test_gt = np.zeros((nr_img_test, gridy * 28, gridx * 28, 10))
-
-    digit_count = 0
-    for i in xrange(nr_img_test):
-        for ii in xrange(gridy):
-            for iii in xrange(gridx):
-                dat_test[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii)] = mnist.test.images[
-                    digit_count].reshape(28, 28,1)
-
-                gt_patch = (np.outer(np.ceil(mnist.test.images[digit_count]),
-                                     (mnist.test.labels[digit_count])) +
-                            np.outer((np.ceil(mnist.test.images[digit_count]) - 1) * -1,(mnist.test.labels[digit_count])))
-
-                dat_test_gt[i, 0 + (28 * ii):28 + (28 * ii), (28 * iii):28 + (28 * iii), :] = gt_patch.reshape(28, 28,
-                                                                                                               10)
-
-                digit_count += 1
+    return dat_train, dat_train_gt
 
 
-    return dat_train, dat_train_gt, dat_test, dat_test_gt
+
