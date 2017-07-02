@@ -43,7 +43,7 @@ def maybe_download_and_extract(dir_path, url_name, is_tarfile=False, is_zipfile=
                 zf.extractall(dir_path)
 
 
-def save_image(image, save_dir, name, mean=None):
+def save_image(image, save_dir, name, mean=False):
     """
     Save image by unprocessing if mean given else just save
     :param mean:

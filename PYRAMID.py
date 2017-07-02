@@ -2,7 +2,7 @@ from __future__ import print_function
 import tensorflow as tf
 import numpy as np
 
-
+import pdb
 import PyramidCell2D
 import TensorflowUtils as utils
 import read_MITSceneParsingData as scene_parsing
@@ -19,7 +19,7 @@ tf.flags.DEFINE_string("dataset", "MNIST", "MIT or MNIST")
 tf.flags.DEFINE_string("data_dir", "Data_zoo/MIT_SceneParsing/", "path to dataset")
 tf.flags.DEFINE_float("learning_rate", "1e-4", "Learning rate for Adam Optimizer")
 tf.flags.DEFINE_bool('debug', "False", "Debug mode: True/ False")
-tf.flags.DEFINE_string('mode', "train", "Mode train/ test/ visualize")
+tf.flags.DEFINE_string('mode', "visualize", "Mode train/ test/ visualize")
 
 
 MAX_ITERATION = int(1e5 + 1)
@@ -89,9 +89,9 @@ def inference(image, keep_prob):
     dims = np.concatenate((dims, dims * -1))
 
     print("Allocate cell 0")
-    out0 = allocate_pyramid_cell(dims, [5], 16, 16, image, "pyramid_0")
-    out1 = allocate_pyramid_cell(dims, [5], 32, 32, out0,  "pyramid_1")
-    out2 = allocate_pyramid_cell(dims, [5], 64, 64, out1,  "pyramid_2")
+    out0 = allocate_pyramid_cell(dims, [5], 4, 4, image, "pyramid_0")
+    out1 = allocate_pyramid_cell(dims, [5], 8, 8, out0,  "pyramid_1")
+    out2 = allocate_pyramid_cell(dims, [5], 16, 16, out1,  "pyramid_2")
 
     dense2 = tf.layers.dense(inputs=out2, units=NUM_OF_CLASSES)
 
@@ -188,15 +188,22 @@ def main(argv=None):
     elif FLAGS.mode == "visualize":
         valid_images, valid_annotations = validation_dataset_reader.get_random_batch(FLAGS.batch_size)
         pred = sess.run(pred_annotation, feed_dict={image: valid_images, annotation: valid_annotations,
-                                                    keep_probability: 1.0})
+                                                     keep_probability: 1.0})
         valid_annotations = np.squeeze(valid_annotations, axis=3)
         pred = np.squeeze(pred, axis=3)
 
+
         for itr in range(FLAGS.batch_size):
-            utils.save_image(valid_images[itr].astype(np.uint8), FLAGS.logs_dir, name="inp_" + str(5+itr))
-            utils.save_image(valid_annotations[itr].astype(np.uint8), FLAGS.logs_dir, name="gt_" + str(5+itr))
-            utils.save_image(pred[itr].astype(np.uint8), FLAGS.logs_dir, name="pred_" + str(5+itr))
-            print("Saved image: %d" % itr)
+            if valid_images[itr].astype(np.uint8).shape[2] == 1:
+                print("bad shape")
+                utils.save_image(valid_images[itr].astype(np.uint8).reshape(IMAGE_SIZE,IMAGE_SIZE), FLAGS.logs_dir, name="inp_" + str(5+itr))
+                utils.save_image(valid_annotations[itr].astype(np.uint8).reshape(IMAGE_SIZE,IMAGE_SIZE), FLAGS.logs_dir, name="gt_" + str(5+itr))
+                utils.save_image(pred[itr].astype(np.uint8).reshape(IMAGE_SIZE,IMAGE_SIZE), FLAGS.logs_dir, name="pred_" + str(5+itr))
+            else:
+                utils.save_image(valid_images[itr].astype(np.uint8), FLAGS.logs_dir, name="inp_" + str(5+itr))
+                utils.save_image(valid_annotations[itr].astype(np.uint8), FLAGS.logs_dir, name="gt_" + str(5+itr))
+                utils.save_image(pred[itr].astype(np.uint8), FLAGS.logs_dir, name="pred_" + str(5+itr))
+                print("Saved image: %d" % itr)
 
 
 if __name__ == "__main__":
