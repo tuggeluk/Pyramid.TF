@@ -28,6 +28,14 @@ IMAGE_SIZE = 28
 
 
 def process_dimension(input, cell, dim, scope):
+    """
+    Processes the image in a given dimension
+    :param input: 
+    :param cell: 
+    :param dim: 
+    :param scope: 
+    :return: 
+    """
     act_img = input
     # flip dimension
     if np.sign(dim) < 0:
@@ -43,7 +51,7 @@ def process_dimension(input, cell, dim, scope):
 
     hidden  = cell.zero_state(FLAGS.batch_size, tf.float32)
     outputs = []
-
+    # use tf.loop here
     for i in range(input.shape.as_list()[1]):
         out, hidden = cell(act_img[:, i], hidden, dim, scope)
         outputs.append(out)
@@ -56,6 +64,17 @@ def process_dimension(input, cell, dim, scope):
 
 
 def allocate_pyramid_cell(dims, kernel_size, state_size,dense_hidden, input, scope_name):
+    """
+    Allocates on pyramid cell and processes the inputs in all dimensions according to dims
+    :param dims: 
+    :param kernel_size: 
+    :param state_size: 
+    :param dense_hidden: 
+    :param input: 
+    :param scope_name: 
+    :return: 
+    """
+
     # allocate pyramid cell
     with tf.variable_scope(scope_name, initializer=tf.random_uniform_initializer(-.01, 0.1)) as scope:
         cell = PyramidCell2D.BasicPyramidLSTMCell2D(input.get_shape().as_list()[1:3], kernel_size, state_size)
@@ -78,6 +97,12 @@ def allocate_pyramid_cell(dims, kernel_size, state_size,dense_hidden, input, sco
 
 
 def inference(image, keep_prob):
+    """
+    Allocates three pyramid layers, one dense layer and builds logits
+    :param image: Tensor containing an Image
+    :param keep_prob: 
+    :return: 
+    """
     print("do inference")
     # determine dimensions of image
     if len(image.get_shape().as_list()) != 4:
@@ -114,14 +139,21 @@ def train(loss_val, var_list):
 
 
 def main(argv=None):
+
+    # Placeholders
     keep_probability = tf.placeholder(tf.float32, name="keep_probabilty")
     image = tf.placeholder(tf.float32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 1], name="input_image")
     annotation = tf.placeholder(tf.int32, shape=[None, IMAGE_SIZE, IMAGE_SIZE, 1], name="annotation")
 
+    # Set up computation Graph
     pred_annotation, logits = inference(image, keep_probability)
+
+    # Summaries
     tf.summary.image("input_image", image, max_outputs=2)
     tf.summary.image("ground_truth", tf.cast(annotation, tf.uint8), max_outputs=2)
     tf.summary.image("pred_annotation", tf.cast(pred_annotation, tf.uint8), max_outputs=2)
+
+    # Cross entropy loss
     loss = tf.reduce_mean((tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits,
                                                                           labels=tf.squeeze(annotation, squeeze_dims=[3]),
                                                                           name="entropy")))
